@@ -1,0 +1,8 @@
+raw_data/
+data/
+results/
+__pycache__/
+*.pyc
+.venv/
+*.log
+.DS_Store
