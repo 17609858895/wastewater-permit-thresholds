@@ -1,6 +1,6 @@
 # Wastewater permit-threshold analysis
 
-Core research code for **Self-reported effluent concentrations cluster below permit limits at US municipal wastewater treatment plants**.
+Core research code for **How well do self-reported effluent data reflect compliance at US wastewater treatment plants near permit limits?**
 
 The primary reconstruction covers seven parameters in the C2 and C3 concentration fields of US publicly owned treatment works permits. It models rounded and nondetect reports as intervals, coarsens detected values in [0.8L, 2L), fits normal and logistic location-scale components with five permit folds, and combines expected near-limit exceedances with observed extreme exceedances. C2/C3 are administrative concentration fields, not universally monthly/daily averages.
 
