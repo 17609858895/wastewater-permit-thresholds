@@ -67,6 +67,7 @@ python scripts/15u_postprocess.py
 | Precision-spread estimates | `19u_latent_scale_checks.py` | production predictions and features |
 | Historical gradients and example sequence | `20u_gradients_example.py` | production predictions and features |
 | Phosphorus by permit-limit level | `21u_tp_limit_levels.py`, `21v_tp_near_limit_profiles.py` | production predictions |
+| Size of reported exceedances and headroom composition by constituent | `22u_exceedance_magnitude.py` | production predictions, `15u` strata and `20u` gradients |
 
 Run each listed entry point with `python scripts/<entry point>`. For window sensitivity, the production driver accepts `--kappa`, `--lam` and `--placebo`; the exact settings are described in the Supporting Information. Analytical scripts retain the original computation and output structure. Public-release changes concern raw-data paths, explanatory docstrings, the auxiliary-table extraction helper and a sequential entry point.
 
