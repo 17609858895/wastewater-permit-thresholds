@@ -2,8 +2,8 @@
 
 Headroom is exp(log L - median(previous log v)), using up to twelve previous
 reports. The count estimand combines expected window counts and observed
-extremes. The TP example uses the source concentration field and analytical
-threshold; the output does not reconstruct permit-specific legal determinations.
+extremes. Exceedances are counted above the permit limit, as in cliffmix.py; the
+output does not reconstruct permit-specific legal determinations.
 """
 import sys
 from pathlib import Path

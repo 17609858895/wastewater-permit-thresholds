@@ -1,5 +1,13 @@
-"""Helpers for the unified CLIFF-Stack outputs (normal + logistic latent errors, mixture weight w)."""
+"""Helpers for the unified CLIFF-Stack outputs (normal + logistic latent errors, mixture weight w).
+
+Exceedance threshold (2026-11-23): exceedances are counted at the permit limit itself, v > L, which matches the
+effluent violation code E90 that EPA attaches to the reports (99.9% of detected TP C2 reports with L < v < T carry it).
+The precision-adjusted threshold T = L + half the limit's last-place unit, stored in the prediction files by 05u, is
+kept as a sensitivity analysis: set the environment variable CLIFF_THRESHOLD=T to reproduce it. Placebo runs keep the
+stored threshold, which already equals the placebo cut-point.
+"""
 import json
+import os
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -16,10 +24,22 @@ def cdf(x, mu_n, s_n, mu_l, s_l, w):
     return w * ndtr((x - mu_n) / np.exp(s_n)) + (1 - w) * expit((x - mu_l) / np.exp(s_l))
 
 
+THRESHOLD = os.environ.get("CLIFF_THRESHOLD", "L").upper()
+
+
 def load(stratum, kappa=0.8, lam=2.0, extra="", columns=None):
     tag = f"{stratum}_k{kappa}_lam{lam}{extra}"
     res = json.load(open(E2U / f"{tag}.json"))
-    p = pd.read_parquet(E2U / f"{tag}_pred.parquet", columns=columns)
+    at_limit = THRESHOLD == "L" and "placebo" not in extra
+    cols = columns
+    if at_limit and columns is not None and ({"T", "O"} & set(columns)):
+        cols = list(dict.fromkeys(list(columns) + ["v", "L", "nd"]))
+    p = pd.read_parquet(E2U / f"{tag}_pred.parquet", columns=cols)
+    if at_limit:
+        if "T" in p.columns:
+            p["T"] = p["L"].values
+        if "O" in p.columns:
+            p["O"] = ((p.v.values > p.L.values) & (p.nd.values == 0)).astype(float)
     return p, res
 
 

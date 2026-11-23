@@ -6,10 +6,14 @@ of the national stack (same estimand as 05u: (E_window - O_window) / (E_window +
 resamples and fitted distributions fixed.
 """
 import json
+import sys
 from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.special import ndtr, expit
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import cliffmix as cm  # noqa: E402  (threshold handling shared with the other postprocessing scripts)
 
 PROJ = Path(__file__).resolve().parents[1]
 U = PROJ / "results" / "E2u_unified"
@@ -18,7 +22,7 @@ BINS, LABS = [0, .5, 1.0, 2.0, np.inf], ["<0.5", "0.5-1", "1-2", ">=2"]
 rows = []
 rng = np.random.default_rng(0)
 for st in ["TP_C2", "TP_C3"]:
-    d = pd.read_parquet(U / f"{st}_k0.8_lam2.0_pred.parquet", columns=["permit", "v", "L", "nd", "mu_n", "s_n", "mu_l", "s_l", "T", "O"])
+    d, _ = cm.load(st, columns=["permit", "v", "L", "nd", "mu_n", "s_n", "mu_l", "s_l", "T", "O"])
     w = json.loads((U / f"{st}_k0.8_lam2.0.json").read_text())["w_normal"]
     F = lambda x: w * ndtr((x - d.mu_n) / np.exp(d.s_n)) + (1 - w) * expit((x - d.mu_l) / np.exp(d.s_l))
     keep = d.nd == 0

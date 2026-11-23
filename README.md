@@ -1,8 +1,10 @@
 # Wastewater permit-threshold analysis
 
-Core research code for **Effluent phosphorus at US wastewater treatment plants accumulates below permit limits and follows tightened limits**.
+Core research code for **Self-reported effluent concentrations cluster below permit limits at US municipal wastewater treatment plants**.
 
 The primary reconstruction covers seven parameters in the C2 and C3 concentration fields of US publicly owned treatment works permits. It models rounded and nondetect reports as intervals, coarsens detected values in [0.8L, 2L), fits normal and logistic location-scale components with five permit folds, and combines expected near-limit exceedances with observed extreme exceedances. C2/C3 are administrative concentration fields, not universally monthly/daily averages.
+
+Exceedances are counted above the permit limit (v > L), which matches the effluent violation code E90 that EPA attaches to the reports. Set the environment variable `CLIFF_THRESHOLD=T` before post-processing to count exceedances above the precision-adjusted threshold T = L + half the limit's last-place unit instead; the manuscript reports this as a sensitivity analysis. Model fitting is unaffected by this choice.
 
 ## Setup and quick verification
 
@@ -55,6 +57,7 @@ python scripts/15u_postprocess.py
 | Threshold heterogeneity and precision-grid diagnostics | `03b_discontinuity_heterogeneity.py`, `10b_density_jump.py` | screened sample/features |
 | Model-free limit changes | `07_limit_change_events.py` | screened sample |
 | Unchanged-limit controls for limit changes | `07c_limit_change_controls.py` | screened sample |
+| TP band shares against a median-scaling reference | `07d_tp_band_changes.py` | screened sample, features and `07c` outputs |
 | Semi-synthetic reconstruction and comparators | `08_semisynthetic_benchmark.py`, then `08b_semisynthetic_nearest.py` | BOD5 features |
 | Repeated semi-synthetic recovery with the final mixture | `08c_semisynthetic_mixture_repeats.py` (`--job`, or `--queue`, then `--collect`) | BOD5 features |
 | Separate normal-component simulation | `sim_crossfit_check.py` | none |
@@ -69,6 +72,6 @@ Run each listed entry point with `python scripts/<entry point>`. For window sens
 
 ## Interpretation
 
-The shortfall is a model-conditioned discrepancy, not a verified count of omitted or legally noncompliant discharges. It includes exceedances prevented by operation and is therefore an upper bound on exceedances missing from the record. Bootstrap intervals keep component fits, weights and windows fixed. `08_semisynthetic_benchmark.py` fits the normal component with three folds and one realization at each of four displacements; `08c_semisynthetic_mixture_repeats.py` repeats the recovery with the five-fold national mixture (two replicates at displacement probabilities 0 and 0.5, one at 0.25 and 0.75, and permit-clustered displacement). All simulations use BOD5 C2 series. Regulatory-record comparisons use full-period fitted distributions and are retrospective. `07c_limit_change_controls.py` compares model-free limit-change contrasts with up to 20 unchanged-limit series per event; the model-based profiles of `18u_future_limit_test.py` have no controls. See the manuscript and Supporting Information for definitions and limitations.
+The shortfall is a model-conditioned discrepancy, not a verified count of omitted or legally noncompliant discharges. It can include exceedances prevented by operation, sampling and averaging choices within the monitoring period, values just above the limit that are rounded to it, changes before submission and model error. Bootstrap intervals keep component fits, weights and windows fixed. `08_semisynthetic_benchmark.py` fits the normal component with three folds and one realization at each of four displacements; `08c_semisynthetic_mixture_repeats.py` repeats the recovery with the five-fold national mixture (two replicates at displacement probabilities 0 and 0.5, one at 0.25 and 0.75, and permit-clustered displacement). All simulations use BOD5 C2 series. Regulatory-record comparisons use full-period fitted distributions and are retrospective. `07c_limit_change_controls.py` compares model-free limit-change contrasts with up to 20 unchanged-limit series per event; the model-based profiles of `18u_future_limit_test.py` have no controls. See the manuscript and Supporting Information for definitions and limitations.
 
 Contact: Chong Liu, chong.liu@auckland.ac.nz.

@@ -46,7 +46,7 @@ def unit_metrics(r):
     return out
 
 
-def run_param(p, rng):
+def run_param(p, rng, *, return_matches=False):
     d = pd.read_parquet(PROJ / "data" / "analysis_sample.parquet", columns=KEY + ["period_end", "v", "L", "nd"],
                         filters=[("param", "==", p)])
     for c in ["statbase", "vtype", "outfall"]:
@@ -99,6 +99,8 @@ def run_param(p, rng):
                 pairs.append((e.unit, f"C{e.ser}_{j}", c, e.t0, st.at[c, "Lc"], e.L_new / e.L_old))
     pr = pd.DataFrame(pairs, columns=["event", "unit", "cser", "t0", "Lold", "f"])
     pr["Lnew"] = pr.Lold * pr.f
+    if return_matches:
+        return ev, pr
     rows = []
     for i in range(0, len(pr), 4000):
         c = pr.iloc[i:i + 4000].merge(cd.rename(columns={"ser": "cser"}), on="cser")

@@ -54,11 +54,17 @@ if __name__ == "__main__":
         q["permit"] = p.permit.values
         lo, hi = boot(q)
         g = group_table(q.assign(all="all"), "all").iloc[0]
+        # single-family shares at the threshold in use (05u stored them at the precision-adjusted threshold T)
+        fam = {}
+        for name, wf in [("normal", 1.0), ("logistic", 0.0)]:
+            Ef = (cm.cdf(np.log(2.0 * p.L.values), p.mu_n.values, p.s_n.values, p.mu_l.values, p.s_l.values, wf)
+                  - cm.cdf(np.log(p["T"].values), p.mu_n.values, p.s_n.values, p.mu_l.values, p.s_l.values, wf)).sum()
+            fam[name] = (Ef - q.O_win.sum()) / (Ef + q.O_abv.sum())
         strata.append(dict(stratum=st, n=res["n"], permits=res["permits"], w_normal=res["w_normal"],
                            ll_normal=res["mean_ll_normal"], ll_logistic=res["mean_ll_logistic"], ll_stack=res["mean_ll_stack"],
                            auc=res["auc_donut_entry"], auc_persistence=res["auc_persistence_lag1"],
                            calib_OE=res["donut_calibration_O_over_E"], missing=g.missing, missing_share=g.missing_share,
-                           ci_lo=lo, ci_hi=hi, share_normal=res["missing_share_normal"], share_logistic=res["missing_share_logistic"],
+                           ci_lo=lo, ci_hi=hi, share_normal=fam["normal"], share_logistic=fam["logistic"],
                            reported_rate=g.reported_exc_rate, counterfactual_rate=g.counterfactual_exc_rate,
                            E_win=g.E_win, O_win=g.O_win, O_abv=g.O_abv,
                            **{f"OE_{d['c']}": d["ratio"] for d in res["ladder"]}))
@@ -142,11 +148,22 @@ if __name__ == "__main__":
     print(X.round(4).to_string())
     # sensitivity / placebo
     sens = []
-    for tag in ["BOD5_C2_k0.8_lam2.0", "BOD5_C2_k0.7_lam2.0", "BOD5_C2_k0.8_lam1.5", "BOD5_C2_k0.8_lam1.5_placebo0.5"]:
-        f = cm.E2U / f"{tag}.json"
-        if f.exists():
-            r = json.load(open(f))
-            sens.append(dict(tag=tag, w=r["w_normal"], stack=r["missing_share_stack"], normal=r["missing_share_normal"],
-                             logistic=r["missing_share_logistic"], ladder=json.dumps({d["c"]: round(d["ratio"], 3) for d in r["ladder"]})))
+    for tag, kap, lam_, extra in [("BOD5_C2_k0.8_lam2.0", 0.8, 2.0, ""), ("BOD5_C2_k0.7_lam2.0", 0.7, 2.0, ""),
+                                  ("BOD5_C2_k0.8_lam1.5", 0.8, 1.5, ""),
+                                  ("BOD5_C2_k0.8_lam1.5_placebo0.5", 0.8, 1.5, "_placebo0.5")]:
+        if not (cm.E2U / f"{tag}_pred.parquet").exists():
+            continue
+        ps, r = cm.load("BOD5_C2", kappa=kap, lam=lam_, extra=extra, columns=["v", "L", "T", "nd", "mu_n", "s_n", "mu_l", "s_l"])
+        Leff = ps.L.values * (0.5 if extra else 1.0)
+        thr, vv, kp = ps["T"].values, ps.v.values, ps.nd.values == 0
+        o_w = ((vv >= thr - 1e-12) & (vv > Leff) & (vv < lam_ * Leff) & kp).sum()
+        o_a = ((vv >= lam_ * Leff) & kp).sum()
+        shares = {}
+        for name, wf in [("stack", r["w_normal"]), ("normal", 1.0), ("logistic", 0.0)]:
+            cdfx = lambda x: cm.cdf(x, ps.mu_n.values, ps.s_n.values, ps.mu_l.values, ps.s_l.values, wf)
+            Ew = (cdfx(np.log(lam_ * Leff)) - cdfx(np.log(thr))).sum()
+            shares[name] = (Ew - o_w) / (Ew + o_a)
+        sens.append(dict(tag=tag, w=r["w_normal"], stack=shares["stack"], normal=shares["normal"], logistic=shares["logistic"],
+                         ladder=json.dumps({d["c"]: round(d["ratio"], 3) for d in r["ladder"]})))
     pd.DataFrame(sens).to_csv(OUT / "sensitivity_placebo.csv", index=False)
     print(pd.DataFrame(sens).drop(columns="ladder").round(4).to_string())
